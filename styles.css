@@ -17,6 +17,117 @@ body {
     -webkit-touch-callout: none;
 }
 
+.start-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1500;
+}
+
+.start-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.start-panel {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 18px;
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.start-panel h2 {
+    font-size: 1.4rem;
+    color: #2C3E50;
+    font-weight: 600;
+}
+
+.start-description {
+    color: #5D6D7E;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #34495E;
+    font-size: 0.95rem;
+}
+
+.slider-value {
+    font-size: 0.85rem;
+    color: #1ABC9C;
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    background: #dfe6e9;
+    border-radius: 4px;
+    outline: none;
+    transition: background 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6bffba, #4ECDC4);
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,  #6bffba, #4ECDC4);
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.primary-button {
+    background: linear-gradient(135deg,  #6bffba, #4ECDC4);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-button:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(78, 205, 196, 0.35);
+}
+
+.primary-button:active {
+    transform: scale(0.97);
+}
+
 .game-container {
     width: 100%;
     max-width: 400px;
@@ -30,7 +141,7 @@ body {
 }
 
 .game-header {
-    background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+    background: linear-gradient(135deg, #03759f, #4ECDC4);
     color: white;
     padding: 15px;
     text-align: center;
@@ -202,7 +313,7 @@ body {
 }
 
 #restart-button {
-    background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+    background: linear-gradient(135deg,  #6bffba, #4ECDC4);
     color: white;
     border: none;
     padding: 12px 24px;

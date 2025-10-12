@@ -4,7 +4,7 @@ const CONFIG = {
     GRID_HEIGHT: 4,
     INCUBATION_TIME: 5000, // 5 seconds
     FEEDING_TIME: 10000, // 10 seconds per feeding
-    FISH_NEEDED_FORAGING: 1,
+    FISH_NEEDED_FORAGING: 3,
     FISH_NEEDED_PER_FEEDING: 1,
     MAX_BOATS: 3,
     BOAT_CAPACITY: 3,
@@ -881,25 +881,85 @@ class GameState {
 // Game instance and event handlers
 let game;
 
+function setupStartScreen() {
+    const startScreen = document.getElementById('start-screen');
+    const startButton = document.getElementById('start-button');
+    const portSlider = document.getElementById('port-distance-slider');
+    const portValue = document.getElementById('port-distance-value');
+    const boatSlider = document.getElementById('boat-count-slider');
+    const boatValue = document.getElementById('boat-count-value');
+
+    if (!startScreen || !startButton || !portSlider || !portValue || !boatSlider || !boatValue) {
+        console.warn('Start screen elements are missing.');
+        game = new GameState();
+        game.renderGrid();
+        return;
+    }
+
+    const updatePortLabel = () => {
+        const tiles = parseInt(portSlider.value, 10);
+        const label = tiles === 1 ? 'tile' : 'tiles';
+        portValue.textContent = `${tiles} ${label}`;
+    };
+
+    const updateBoatLabel = () => {
+        const boats = parseInt(boatSlider.value, 10);
+        if (boats === 0) {
+            boatValue.textContent = 'No boats';
+        } else {
+            const label = boats === 1 ? 'boat' : 'boats';
+            boatValue.textContent = `${boats} ${label}`;
+        }
+    };
+
+    const defaultDistance = Math.max(1, CONFIG.NEST_LOCATION.x - CONFIG.PORT_LOCATION.x);
+    portSlider.value = String(defaultDistance);
+    updatePortLabel();
+
+    boatSlider.value = String(CONFIG.MAX_BOATS);
+    updateBoatLabel();
+
+    portSlider.addEventListener('input', updatePortLabel);
+    boatSlider.addEventListener('input', updateBoatLabel);
+
+    startButton.addEventListener('click', () => {
+        const distance = parseInt(portSlider.value, 10);
+        const boatCount = parseInt(boatSlider.value, 10);
+
+        CONFIG.PORT_LOCATION.x = Math.max(0, CONFIG.NEST_LOCATION.x - distance);
+        CONFIG.PORT_LOCATION.y = 0;
+        CONFIG.MAX_BOATS = boatCount;
+
+        startScreen.classList.add('hidden');
+        startScreen.setAttribute('aria-hidden', 'true');
+        startScreen.style.display = 'none';
+
+        game = new GameState();
+        game.renderGrid();
+    }, { once: true });
+}
+
+function setupGridListeners() {
+    const grid = document.getElementById('game-grid');
+    if (!grid) return;
+
+    grid.addEventListener('click', handleGridClick);
+    grid.addEventListener('touchstart', handleGridClick);
+}
+
 // Initialize game when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    game = new GameState();
-    game.renderGrid();
-    
-    // Add click/touch event listeners to grid
-    document.getElementById('game-grid').addEventListener('click', handleGridClick);
-    document.getElementById('game-grid').addEventListener('touchstart', handleGridClick);
+    setupStartScreen();
+    setupGridListeners();
 });
 
 function handleGridClick(event) {
     event.preventDefault();
     
     const cell = event.target.closest('.grid-cell');
-    if (!cell || !game.gameRunning || game.isSeabirdMoving) return;
+    if (!cell || !game || !game.gameRunning || game.isSeabirdMoving) return;
 
-    if (game) {
-        game.ensureAudioContext();
-    }
+    game.ensureAudioContext();
 
     const x = parseInt(cell.dataset.x);
     const y = parseInt(cell.dataset.y);
