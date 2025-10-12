@@ -4,13 +4,13 @@ const CONFIG = {
     GRID_HEIGHT: 4,
     INCUBATION_TIME: 5000, // 5 seconds
     FEEDING_TIME: 10000, // 10 seconds per feeding
-    FISH_NEEDED_FORAGING: 3,
-    FISH_NEEDED_PER_FEEDING: 3,
-    MAX_BOATS: 0,
+    FISH_NEEDED_FORAGING: 1,
+    FISH_NEEDED_PER_FEEDING: 1,
+    MAX_BOATS: 3,
     BOAT_CAPACITY: 3,
     BOAT_SPEED: 1000, // milliseconds per move
     PORT_LOCATION: { x: 0, y: 0 }, // configurable port spawn location
-    NEST_LOCATION: { x: 7, y: 3 } // seabird nest location
+    NEST_LOCATION: { x: 7, y: 2 } // seabird nest location
 };
 
 // Arrow directions with their corresponding movement vectors
