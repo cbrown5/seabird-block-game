@@ -1,7 +1,7 @@
 # 🐦 Seabird Foraging Game
 
 A mobile-friendly educational puzzle game about seabird ecology, parental care, and marine ecosystem dynamics.
-7921
+
 ## 🎮 How to Play
 
 ### Game Phases
