@@ -24,7 +24,10 @@
             </label>
             <input type="range" id="boat-count-slider" min="0" max="5" value="2">
 
-            <button id="start-button" class="primary-button">Start Foraging</button>
+            <div class="start-actions">
+                <button id="start-button" class="primary-button">Start Foraging</button>
+                <button id="instructions-button" class="secondary-button" type="button">How to Play</button>
+            </div>
         </div>
     </div>
 
@@ -66,8 +69,27 @@
             <div class="overlay-content">
                 <h2 id="overlay-title">Game Over</h2>
                 <p id="overlay-message">Your chick didn't get fed in time!</p>
+                <div id="overlay-reflection" class="overlay-reflection" hidden>
+                    <h3>Reflect on Your Foraging</h3>
+                    <ul id="reflection-list"></ul>
+                </div>
                 <button id="restart-button" onclick="game.restart()">Play Again</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal" id="instructions-modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-dialog" role="dialog" aria-labelledby="instructions-title" aria-modal="true" tabindex="-1">
+            <button class="modal-close" id="instructions-close" type="button" aria-label="Close instructions">×</button>
+            <h2 id="instructions-title">How to Play</h2>
+            <ol class="modal-list">
+                <li>Rotate arrows to guide your seabird toward fish.</li>
+                <li>Tap a fish to follow the arrows and collect it.</li>
+                <li>Gather enough fish to incubate and feed your chick before time runs out.</li>
+                <li>Watch for fishing boats competing for the same fish!</li>
+            </ol>
+            <p class="modal-tip">Tip: Fewer boats and a shorter distance to port make for easier foraging.</p>
         </div>
     </div>
 

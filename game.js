@@ -27,6 +27,12 @@ const ARROWS = {
 
 const ARROW_ORDER = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
 
+const REFLECTION_QUESTIONS = [
+    'Where on the grid did you find the most fish, and why might seabirds favor those spots?',
+    'How did the fishing boats change where you decided to forage?',
+    'If conditions worsened, what strategy would help your chick get fed faster?'
+];
+
 // Game phases
 const PHASES = {
     FORAGING: 'foraging',
@@ -529,7 +535,9 @@ class GameState {
         this.gameRunning = false;
         this.clearTimer();
         this.clearAllBoatTimers();
-        this.showOverlay('Victory!', 'You successfully raised a healthy seabird chick!');
+        this.showOverlay('Victory!', 'You successfully raised a healthy seabird chick!', {
+            questions: REFLECTION_QUESTIONS
+        });
     }
 
     gameOver(message) {
@@ -537,17 +545,54 @@ class GameState {
         this.clearTimer();
         this.clearAllBoatTimers();
         this.playSound('gameOver');
-        this.showOverlay('Game Over', message);
+        this.showOverlay('Game Over', message, {
+            questions: REFLECTION_QUESTIONS
+        });
     }
 
-    showOverlay(title, message) {
+    showOverlay(title, message, options = {}) {
         document.getElementById('overlay-title').textContent = title;
         document.getElementById('overlay-message').textContent = message;
-        document.getElementById('game-overlay').style.display = 'flex';
+
+        const overlay = document.getElementById('game-overlay');
+        const reflectionContainer = document.getElementById('overlay-reflection');
+        const reflectionList = document.getElementById('reflection-list');
+
+        if (reflectionContainer && reflectionList) {
+            const questions = options.questions;
+            if (Array.isArray(questions) && questions.length) {
+                reflectionContainer.hidden = false;
+                reflectionContainer.removeAttribute('hidden');
+                reflectionList.innerHTML = '';
+                questions.forEach(question => {
+                    const li = document.createElement('li');
+                    li.textContent = question;
+                    reflectionList.appendChild(li);
+                });
+            } else {
+                reflectionContainer.hidden = true;
+                reflectionContainer.setAttribute('hidden', 'true');
+                reflectionList.innerHTML = '';
+            }
+        }
+
+        overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
     }
 
     hideOverlay() {
-        document.getElementById('game-overlay').style.display = 'none';
+        const overlay = document.getElementById('game-overlay');
+        const reflectionContainer = document.getElementById('overlay-reflection');
+        const reflectionList = document.getElementById('reflection-list');
+
+        if (reflectionContainer && reflectionList) {
+            reflectionContainer.hidden = true;
+            reflectionContainer.setAttribute('hidden', 'true');
+            reflectionList.innerHTML = '';
+        }
+
+        overlay.style.display = 'none';
+        overlay.setAttribute('aria-hidden', 'true');
     }
 
     showFeedback(type, message) {
@@ -888,6 +933,10 @@ function setupStartScreen() {
     const portValue = document.getElementById('port-distance-value');
     const boatSlider = document.getElementById('boat-count-slider');
     const boatValue = document.getElementById('boat-count-value');
+    const instructionsButton = document.getElementById('instructions-button');
+    const instructionsModal = document.getElementById('instructions-modal');
+    const instructionsClose = document.getElementById('instructions-close');
+    const modalBackdrop = instructionsModal ? instructionsModal.querySelector('[data-close-modal]') : null;
 
     if (!startScreen || !startButton || !portSlider || !portValue || !boatSlider || !boatValue) {
         console.warn('Start screen elements are missing.');
@@ -895,6 +944,46 @@ function setupStartScreen() {
         game.renderGrid();
         return;
     }
+
+    const closeInstructionsModal = () => {
+        if (!instructionsModal) return;
+        instructionsModal.classList.remove('active');
+        instructionsModal.setAttribute('aria-hidden', 'true');
+    };
+
+    const openInstructionsModal = () => {
+        if (!instructionsModal) return;
+        instructionsModal.classList.add('active');
+        instructionsModal.setAttribute('aria-hidden', 'false');
+        const dialog = instructionsModal.querySelector('.modal-dialog');
+        if (dialog) {
+            try {
+                dialog.focus({ preventScroll: true });
+            } catch (error) {
+                dialog.focus();
+            }
+        }
+    };
+
+    if (instructionsButton && instructionsModal) {
+        instructionsButton.addEventListener('click', openInstructionsModal);
+    }
+
+    if (instructionsClose) {
+        instructionsClose.addEventListener('click', closeInstructionsModal);
+    }
+
+    if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', closeInstructionsModal);
+    }
+
+    const handleEscapeKey = (event) => {
+        if (event.key === 'Escape' && instructionsModal && instructionsModal.classList.contains('active')) {
+            closeInstructionsModal();
+        }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
 
     const updatePortLabel = () => {
         const tiles = parseInt(portSlider.value, 10);
@@ -929,6 +1018,8 @@ function setupStartScreen() {
         CONFIG.PORT_LOCATION.x = Math.max(0, CONFIG.NEST_LOCATION.x - distance);
         CONFIG.PORT_LOCATION.y = 0;
         CONFIG.MAX_BOATS = boatCount;
+
+        closeInstructionsModal();
 
         startScreen.classList.add('hidden');
         startScreen.setAttribute('aria-hidden', 'true');
