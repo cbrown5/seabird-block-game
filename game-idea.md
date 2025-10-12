@@ -11,11 +11,5 @@ Phase 3: Chick Care - Feed chick 3 times within 10-second intervals per feeding,
 **Dynamic Challenge System**
 Implement autonomous fishing boats that spawn from  a configurable port location at grid edge, navigate directly toward nearest fish regardless of arrow directions, and compete with the seabird for resources. Each boat carries a hold capacity of 3 fish before returning to port automatically.
 
-**Pre-Game Difficulty Configuration**
-Provide two intuitive slider controls allowing players to adjust fishing boat quantity (0-5 boats) and port proximity to seabird nest (edge positions 1-8), creating scalable challenge levels that demonstrate varying degrees of fishing pressure on marine resources.
-
 **Technical Implementation Requirements**
 Structure the codebase with easily adjustable parameters including grid dimensions (default 8x4), all timer durations (incubation, feeding deadlines), port spawn coordinates, maximum fishing boat count, boat cargo capacity, and boat movement speed multipliers. Ensure responsive design fits entirely within viewport without scrolling, uses emoji sprites for all game elements, implements touch-friendly tap targets, and provides clear visual feedback for all interactions.
-
-**Educational Integration**
-When the game finishes display reflection questions for the player. They reflect on seabird behavior, fishing impacts, and conservation throughout gameplay, with success/failure scenarios directly tied to real-world ecological concepts about resource competition and parental investment strategies.
