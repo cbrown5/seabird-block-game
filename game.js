@@ -6,7 +6,7 @@ const CONFIG = {
     FEEDING_TIME: 10000, // 10 seconds per feeding
     FISH_NEEDED_FORAGING: 3,
     FISH_NEEDED_PER_FEEDING: 3,
-    MAX_BOATS: 2,
+    MAX_BOATS: 0,
     BOAT_CAPACITY: 3,
     BOAT_SPEED: 1000, // milliseconds per move
     PORT_LOCATION: { x: 0, y: 0 }, // configurable port spawn location
@@ -47,6 +47,26 @@ class GameState {
         this.gameRunning = true;
         this.isSeabirdMoving = false;
         this.boatTimer = null;
+        this.audioContext = null;
+        this.soundConfig = {
+            fishCatch: [
+                { frequency: 880, duration: 0.18, wave: 'triangle', volume: 0.22 },
+                { frequency: 1046.5, duration: 0.12, wave: 'sine', volume: 0.18, delay: 0.16 }
+            ],
+            eggLaid: [
+                { frequency: 392, duration: 0.25, wave: 'sine', volume: 0.18 },
+                { frequency: 523.25, duration: 0.25, wave: 'triangle', volume: 0.15, delay: 0.2 }
+            ],
+            eggHatched: [
+                { frequency: 523.25, duration: 0.18, wave: 'square', volume: 0.16 },
+                { frequency: 659.25, duration: 0.2, wave: 'triangle', volume: 0.18, delay: 0.18 },
+                { frequency: 880, duration: 0.25, wave: 'sine', volume: 0.16, delay: 0.38 }
+            ],
+            gameOver: [
+                { frequency: 392, duration: 0.4, wave: 'sawtooth', volume: 0.22 },
+                { frequency: 261.63, duration: 0.5, wave: 'sawtooth', volume: 0.18, delay: 0.35 }
+            ]
+        };
         
         this.initializeGrid();
         this.startBoatSpawning();
@@ -59,11 +79,81 @@ class GameState {
             Array(CONFIG.GRID_WIDTH).fill(null)
         );
 
-        // Place nest
-        this.grid[CONFIG.NEST_LOCATION.y][CONFIG.NEST_LOCATION.x] = '🏝️';
+            // Place nest
+            this.grid[CONFIG.NEST_LOCATION.y][CONFIG.NEST_LOCATION.x] = '🏝️';
+
+            // Place port house
+            this.grid[CONFIG.PORT_LOCATION.y][CONFIG.PORT_LOCATION.x] = '🏠';
 
         // Generate random arrows and fish
         this.generateContent();
+
+        // Ensure nest icon matches current phase
+        this.updateNestIcon();
+    }
+
+    getNestEmoji() {
+        switch (this.phase) {
+            case PHASES.INCUBATION:
+                return '🥚';
+            case PHASES.CHICK_CARE:
+                return '🐣';
+            default:
+                return '🏝️';
+        }
+    }
+
+    updateNestIcon() {
+        this.grid[CONFIG.NEST_LOCATION.y][CONFIG.NEST_LOCATION.x] = this.getNestEmoji();
+    }
+
+    ensureAudioContext() {
+        if (typeof window === 'undefined') return;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+
+        if (!this.audioContext) {
+            this.audioContext = new AudioCtx();
+        }
+
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+        }
+    }
+
+    playSound(key) {
+        const steps = this.soundConfig[key];
+        if (!steps || !steps.length) {
+            return;
+        }
+
+        this.ensureAudioContext();
+        if (!this.audioContext) {
+            return;
+        }
+
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
+        steps.forEach(step => {
+            const duration = step.duration ?? 0.2;
+            const delay = step.delay ?? 0;
+            const startTime = now + delay;
+
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            oscillator.type = step.wave || 'sine';
+            oscillator.frequency.setValueAtTime(step.frequency, startTime);
+
+            const volume = Math.min(Math.max(step.volume ?? 0.15, 0.001), 1);
+            gain.gain.setValueAtTime(volume, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+            oscillator.connect(gain).connect(ctx.destination);
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        });
     }
 
     generateContent() {
@@ -74,7 +164,8 @@ class GameState {
         for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
             for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
                 if (!this.grid[y][x] && 
-                    !(x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y)) {
+                    !(x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) &&
+                    !(x === CONFIG.PORT_LOCATION.x && y === CONFIG.PORT_LOCATION.y)) {
                     emptyCells.push({ x, y });
                 }
             }
@@ -114,7 +205,8 @@ class GameState {
             for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
                 for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
                     if (!this.grid[y][x] || ARROWS[this.grid[y][x]]) {
-                        if (!(x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y)) {
+                        if (!(x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) &&
+                            !(x === CONFIG.PORT_LOCATION.x && y === CONFIG.PORT_LOCATION.y)) {
                             emptyCells.push({ x, y });
                         }
                     }
@@ -135,10 +227,18 @@ class GameState {
         }
     }
 
+    ensureFishAvailability() {
+        if (this.findAllFish().length === 0) {
+            this.regenerateAllGridContent();
+            this.renderGrid();
+        }
+    }
+
     replaceBoatCaughtFish(x, y) {
         // Replace the fish at the given position with either a random arrow or another fish
-        if (x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) {
-            return; // Never replace the nest
+        if ((x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) ||
+            (x === CONFIG.PORT_LOCATION.x && y === CONFIG.PORT_LOCATION.y)) {
+            return; // Never replace the nest or port
         }
 
         const arrowKeys = Object.keys(ARROWS);
@@ -151,6 +251,8 @@ class GameState {
             const randomArrow = arrowKeys[Math.floor(Math.random() * arrowKeys.length)];
             this.grid[y][x] = randomArrow;
         }
+
+        this.ensureFishAvailability();
     }
 
     regenerateAllGridContent() {
@@ -160,7 +262,8 @@ class GameState {
         for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
             for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
                 // Skip the nest location
-                if (x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) {
+                if ((x === CONFIG.NEST_LOCATION.x && y === CONFIG.NEST_LOCATION.y) ||
+                    (x === CONFIG.PORT_LOCATION.x && y === CONFIG.PORT_LOCATION.y)) {
                     continue;
                 }
                 
@@ -178,6 +281,9 @@ class GameState {
         
         // Ensure minimum fish for gameplay
         this.ensureMinimumFish();
+
+        // Refresh nest icon for current phase
+        this.updateNestIcon();
     }
 
     rotateArrow(x, y) {
@@ -197,66 +303,77 @@ class GameState {
     findPathToFish(targetX, targetY) {
         if (this.grid[targetY][targetX] !== '🐟') return null;
 
-        const visited = new Set();
+        const startX = this.seabirdPosition.x;
+        const startY = this.seabirdPosition.y;
+
+        const isAtNest = startX === CONFIG.NEST_LOCATION.x && startY === CONFIG.NEST_LOCATION.y;
+
+        if (isAtNest) {
+            if (Math.abs(targetX - startX) <= 1 && Math.abs(targetY - startY) <= 1) {
+                return [{ x: targetX, y: targetY }];
+            }
+
+            const neighbors = this.getAdjacentArrowCells(startX, startY);
+            for (const neighbor of neighbors) {
+                const path = this.traceArrowPath(neighbor.x, neighbor.y, targetX, targetY, new Set([`${startX},${startY}`]));
+                if (path) {
+                    return path;
+                }
+            }
+            return null;
+        }
+
+        return this.traceArrowPath(startX, startY, targetX, targetY);
+    }
+
+    getAdjacentArrowCells(x, y) {
+        const neighbors = [];
+        for (const symbol of ARROW_ORDER) {
+            const direction = ARROWS[symbol];
+            const nextX = x + direction.dx;
+            const nextY = y + direction.dy;
+
+            if (!this.isValidPosition(nextX, nextY)) continue;
+
+            const cell = this.grid[nextY][nextX];
+            if (ARROWS[cell]) {
+                neighbors.push({ x: nextX, y: nextY });
+            }
+        }
+        return neighbors;
+    }
+
+    traceArrowPath(startX, startY, targetX, targetY, visited = new Set()) {
         const path = [];
-        
-        let currentX = this.seabirdPosition.x;
-        let currentY = this.seabirdPosition.y;
+        let currentX = startX;
+        let currentY = startY;
 
         while (true) {
             const key = `${currentX},${currentY}`;
-            
-            // Check if we've been here before (infinite loop)
             if (visited.has(key)) return null;
             visited.add(key);
 
-            // Check if we reached the target
+            path.push({ x: currentX, y: currentY });
+
             if (currentX === targetX && currentY === targetY) {
                 return path;
             }
 
-            // Get current cell content
             const cell = this.grid[currentY][currentX];
-            
-            // If it's not an arrow (and not the starting nest), path is invalid
-            if (!ARROWS[cell] && !(currentX === CONFIG.NEST_LOCATION.x && currentY === CONFIG.NEST_LOCATION.y)) {
+            if (!ARROWS[cell]) {
                 return null;
             }
 
-            // If we're at the nest, we need to find the first arrow to follow
-            if (currentX === CONFIG.NEST_LOCATION.x && currentY === CONFIG.NEST_LOCATION.y) {
-                // Look for adjacent arrows
-                let foundArrow = false;
-                for (const direction of Object.values(ARROWS)) {
-                    const nextX = currentX + direction.dx;
-                    const nextY = currentY + direction.dy;
-                    
-                    if (this.isValidPosition(nextX, nextY) && ARROWS[this.grid[nextY][nextX]]) {
-                        currentX = nextX;
-                        currentY = nextY;
-                        path.push({ x: currentX, y: currentY });
-                        foundArrow = true;
-                        break;
-                    }
-                }
-                if (!foundArrow) return null;
-                continue;
+            const { dx, dy } = ARROWS[cell];
+            const nextX = currentX + dx;
+            const nextY = currentY + dy;
+
+            if (!this.isValidPosition(nextX, nextY)) {
+                return null;
             }
-
-            // Follow the arrow
-            const direction = ARROWS[cell];
-            const nextX = currentX + direction.dx;
-            const nextY = currentY + direction.dy;
-
-            // Check bounds
-            if (!this.isValidPosition(nextX, nextY)) return null;
 
             currentX = nextX;
             currentY = nextY;
-            path.push({ x: currentX, y: currentY });
-
-            // Prevent infinite loops
-            if (path.length > CONFIG.GRID_WIDTH * CONFIG.GRID_HEIGHT) return null;
         }
     }
 
@@ -273,6 +390,7 @@ class GameState {
             return false;
         }
 
+        this.ensureAudioContext();
         this.isSeabirdMoving = true;
         this.highlightPath(path);
 
@@ -285,6 +403,7 @@ class GameState {
         // Collect the fish
         this.grid[targetY][targetX] = null;
         this.fishCollected++;
+    this.playSound('fishCatch');
         this.showFeedback('success', 'Fish collected!');
 
         // Return to nest
@@ -297,6 +416,9 @@ class GameState {
         this.clearPathHighlight();
         this.isSeabirdMoving = false;
         this.checkPhaseProgression();
+        if (this.phase === PHASES.CHICK_CARE) {
+            this.checkChickFeeding();
+        }
         this.updateDisplay();
 
         return true;
@@ -341,6 +463,9 @@ class GameState {
     startIncubation() {
         this.phase = PHASES.INCUBATION;
         this.timerValue = CONFIG.INCUBATION_TIME / 1000;
+        this.updateNestIcon();
+        this.renderGrid();
+        this.playSound('eggLaid');
         this.startTimer(() => {
             this.startChickCare();
         });
@@ -351,6 +476,9 @@ class GameState {
         this.phase = PHASES.CHICK_CARE;
         this.feedingsCompleted = 0;
         this.fishCollected = 0;
+        this.updateNestIcon();
+        this.renderGrid();
+        this.playSound('eggHatched');
         this.startFeedingTimer();
         this.updateDisplay();
     }
@@ -394,7 +522,6 @@ class GameState {
                 this.showFeedback('success', `Feeding ${this.feedingsCompleted}/3 complete!`);
                 this.startFeedingTimer();
             }
-            this.updateDisplay();
         }
     }
 
@@ -409,6 +536,7 @@ class GameState {
         this.gameRunning = false;
         this.clearTimer();
         this.clearAllBoatTimers();
+        this.playSound('gameOver');
         this.showOverlay('Game Over', message);
     }
 
@@ -480,11 +608,6 @@ class GameState {
 
         // Update instructions
         document.getElementById('instructions').textContent = this.getInstructionText();
-
-        // Check chick feeding progress
-        if (this.phase === PHASES.CHICK_CARE) {
-            this.checkChickFeeding();
-        }
     }
 
     renderGrid() {
@@ -507,15 +630,24 @@ class GameState {
                         cell.classList.add('arrow');
                     } else if (content === '🐟') {
                         cell.classList.add('fish');
-                    } else if (content === '🏝️') {
+                    } else if (content === '🏝️' || content === '🥚' || content === '🐣') {
                         cell.classList.add('nest');
+                    } else if (content === '🏠') {
+                        cell.classList.add('port');
+                    }
+                }
+
+                if (x === CONFIG.PORT_LOCATION.x && y === CONFIG.PORT_LOCATION.y) {
+                    cell.classList.add('port');
+                    if (!content) {
+                        cell.textContent = '🏠';
                     }
                 }
 
                 // Check if seabird is at this position
                 if (x === this.seabirdPosition.x && y === this.seabirdPosition.y) {
                     cell.classList.add('seabird');
-                    if (content !== '🏝️') {
+                    if (content !== '🏝️' && content !== '🥚' && content !== '🐣' && content !== '🏠') {
                         cell.textContent = '🐦';
                     }
                 }
@@ -568,7 +700,10 @@ class GameState {
     spawnBoat() {
         // Check if there are fish available
         const fishPositions = this.findAllFish();
-        if (fishPositions.length === 0) return;
+        if (fishPositions.length === 0) {
+            this.ensureFishAvailability();
+            return;
+        }
 
         // Create new boat at port
         const boat = {
@@ -604,7 +739,12 @@ class GameState {
     }
 
     assignBoatTarget(boat) {
-        const fishPositions = this.findAllFish();
+        let fishPositions = this.findAllFish();
+        if (fishPositions.length === 0) {
+            this.ensureFishAvailability();
+            fishPositions = this.findAllFish();
+        }
+
         if (fishPositions.length === 0) {
             boat.targetX = null;
             boat.targetY = null;
@@ -756,6 +896,10 @@ function handleGridClick(event) {
     
     const cell = event.target.closest('.grid-cell');
     if (!cell || !game.gameRunning || game.isSeabirdMoving) return;
+
+    if (game) {
+        game.ensureAudioContext();
+    }
 
     const x = parseInt(cell.dataset.x);
     const y = parseInt(cell.dataset.y);
