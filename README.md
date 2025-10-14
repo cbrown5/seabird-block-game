@@ -2,11 +2,6 @@
 
 A mobile-friendly educational puzzle game about seabird ecology, parental care, and marine ecosystem dynamics.
 
-TODO
-Reduce number of fish on the field 
-Add instructions on the first page
-Add reflection questions at the end
-
 ## 🎮 How to Play
 
 ### Game Phases

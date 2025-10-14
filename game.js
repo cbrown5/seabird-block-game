@@ -1,7 +1,7 @@
 // Game configuration - easily adjustable parameters
 const CONFIG = {
-    GRID_WIDTH: 8,
-    GRID_HEIGHT: 4,
+    GRID_WIDTH: 4,
+    GRID_HEIGHT: 8,
     INCUBATION_TIME: 5000, // 5 seconds
     FEEDING_TIME: 10000, // 10 seconds per feeding
     FISH_NEEDED_FORAGING: 3,
@@ -10,7 +10,7 @@ const CONFIG = {
     BOAT_CAPACITY: 3,
     BOAT_SPEED: 1000, // milliseconds per move
     PORT_LOCATION: { x: 0, y: 0 }, // configurable port spawn location
-    NEST_LOCATION: { x: 7, y: 2 } // seabird nest location
+    NEST_LOCATION: { x: 2, y: 7 } // seabird nest location
 };
 
 // Arrow directions with their corresponding movement vectors
@@ -28,9 +28,10 @@ const ARROWS = {
 const ARROW_ORDER = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
 
 const REFLECTION_QUESTIONS = [
-    'Where on the grid did you find the most fish, and why might seabirds favor those spots?',
     'How did the fishing boats change where you decided to forage?',
-    'If conditions worsened, what strategy would help your chick get fed faster?'
+    'How does increasing fishing boats affect your foraging?',
+    'How does moving the port closer to your nest affect your foraging?',
+    'What might be some impacts of climate change on seabirds and their food sources?',
 ];
 
 // Game phases
@@ -184,7 +185,7 @@ class GameState {
         }
 
         // Place fish (approximately 25% of empty cells)
-        const fishCount = Math.floor(emptyCells.length * 0.25);
+        const fishCount = Math.floor(emptyCells.length * 0.1);
         for (let i = 0; i < fishCount && i < emptyCells.length; i++) {
             const { x, y } = emptyCells[i];
             this.grid[y][x] = '🐟';
@@ -203,7 +204,7 @@ class GameState {
 
     ensureMinimumFish() {
         const currentFish = this.findAllFish().length;
-        const minFish = Math.max(6, CONFIG.FISH_NEEDED_FORAGING + 2);
+        const minFish = Math.max(3, CONFIG.FISH_NEEDED_FORAGING + 2);
         
         if (currentFish < minFish) {
             // Add more fish to random empty cells
@@ -249,7 +250,7 @@ class GameState {
 
         const arrowKeys = Object.keys(ARROWS);
         // 25% chance for fish, 75% chance for arrow
-        const shouldBeFish = Math.random() < 0.25;
+        const shouldBeFish = Math.random() < 0.1;
         
         if (shouldBeFish) {
             this.grid[y][x] = '🐟';
@@ -274,7 +275,7 @@ class GameState {
                 }
                 
                 // 25% chance for fish, 75% chance for arrow
-                const shouldBeFish = Math.random() < 0.25;
+                const shouldBeFish = Math.random() < 0.1;
                 
                 if (shouldBeFish) {
                     this.grid[y][x] = '🐟';
