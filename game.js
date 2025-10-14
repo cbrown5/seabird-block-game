@@ -1,7 +1,7 @@
 // Game configuration - easily adjustable parameters
 const CONFIG = {
-    GRID_WIDTH: 4,
-    GRID_HEIGHT: 8,
+    GRID_WIDTH: 8,
+    GRID_HEIGHT: 4,
     INCUBATION_TIME: 5000, // 5 seconds
     FEEDING_TIME: 10000, // 10 seconds per feeding
     FISH_NEEDED_FORAGING: 3,
@@ -10,7 +10,7 @@ const CONFIG = {
     BOAT_CAPACITY: 3,
     BOAT_SPEED: 1000, // milliseconds per move
     PORT_LOCATION: { x: 0, y: 0 }, // configurable port spawn location
-    NEST_LOCATION: { x: 2, y: 7 } // seabird nest location
+    NEST_LOCATION: { x: 7, y: 0 } // seabird nest location
 };
 
 // Arrow directions with their corresponding movement vectors
@@ -204,7 +204,7 @@ class GameState {
 
     ensureMinimumFish() {
         const currentFish = this.findAllFish().length;
-        const minFish = Math.max(3, CONFIG.FISH_NEEDED_FORAGING + 2);
+        const minFish = Math.max(5, CONFIG.FISH_NEEDED_FORAGING + 2);
         
         if (currentFish < minFish) {
             // Add more fish to random empty cells
