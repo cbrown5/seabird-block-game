@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ocean Survival Game</title>
+    <link rel="stylesheet" href="ocean-game.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🐟 Ocean Survival</h1>
+            <div class="stats-bar">
+                <div class="stat">
+                    <span class="stat-label">Fish:</span>
+                    <span id="fish-count">100</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Time:</span>
+                    <span id="timer">5:00</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Hunger:</span>
+                    <div class="hunger-bar">
+                        <div id="hunger-fill" class="hunger-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+
+        <div class="instructions">
+            <p>🎮 Use arrow keys or WASD to move your school of fish</p>
+            <p>🟢 Collect plankton to avoid starvation</p>
+            <p>⚠️ Avoid jellyfish and predators!</p>
+            <p>🎯 Survive for 5 minutes with at least 1 fish!</p>
+        </div>
+    </div>
+
+    <div class="game-overlay" id="game-overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2 id="overlay-title">Game Over</h2>
+            <p id="overlay-message">Your school was wiped out!</p>
+            <button id="restart-button">Play Again</button>
+        </div>
+    </div>
+
+    <script src="ocean-game.js"></script>
+</body>
+</html>
