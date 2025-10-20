@@ -4,7 +4,8 @@ const CONFIG = {
     GAME_DURATION: 300, // 5 minutes in seconds
     PLAYER_SPEED: 3,
     JELLYFISH_SPEED: 1.5,
-    PREDATOR_SPEED: 0.01,
+    PREDATOR_SPEED: 1.5, // Reduced from direct targeting to slower pursuit
+    PREDATOR_DETECTION_RANGE: 250, // Predators only hunt when fish are within this distance
     JELLYFISH_COUNT: 8,
     PREDATOR_COUNT: 1,
     PLANKTON_COUNT: 15,
@@ -111,7 +112,8 @@ class Game {
                 vx: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
                 vy: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
                 size: 20 + Math.random() * 15,
-                pulsePhase: Math.random() * Math.PI * 2
+                pulsePhase: Math.random() * Math.PI * 2,
+                damageCooldown: 0 // Cooldown timer to prevent multiple rapid hits
             });
         }
     }
@@ -131,10 +133,11 @@ class Game {
             this.predators.push({
                 x: x,
                 y: y,
-                vx: 0,
-                vy: 0,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: (Math.random() - 0.5) * 0.5,
                 size: 30 + Math.random() * 20,
-                huntCooldown: 0
+                huntCooldown: 0,
+                patrolAngle: Math.random() * Math.PI * 2 // Random patrol direction
             });
         }
     }
@@ -293,19 +296,45 @@ class Game {
             
             // Update pulse phase
             jelly.pulsePhase += dt * 2;
+            
+            // Update damage cooldown
+            if (jelly.damageCooldown > 0) {
+                jelly.damageCooldown -= dt;
+            }
         });
     }
     
     updatePredators(dt) {
         this.predators.forEach(predator => {
-            // Hunt player
+            // Update hunt cooldown
+            if (predator.huntCooldown > 0) {
+                predator.huntCooldown -= dt;
+            }
+            
+            // Calculate distance to player
             const dx = this.player.x - predator.x;
             const dy = this.player.y - predator.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist > 0) {
-                predator.vx = (dx / dist) * CONFIG.PREDATOR_SPEED;
-                predator.vy = (dy / dist) * CONFIG.PREDATOR_SPEED;
+            // Only hunt if player is within detection range
+            if (dist < CONFIG.PREDATOR_DETECTION_RANGE && dist > 0) {
+                // Hunt mode: move toward player
+                const targetVx = (dx / dist) * CONFIG.PREDATOR_SPEED;
+                const targetVy = (dy / dist) * CONFIG.PREDATOR_SPEED;
+                
+                // Smooth transition to hunting velocity
+                predator.vx += (targetVx - predator.vx) * 0.1;
+                predator.vy += (targetVy - predator.vy) * 0.1;
+            } else {
+                // Patrol mode: swim in random direction
+                predator.patrolAngle += (Math.random() - 0.5) * 0.1;
+                const patrolSpeed = CONFIG.PREDATOR_SPEED * 0.3;
+                const targetVx = Math.cos(predator.patrolAngle) * patrolSpeed;
+                const targetVy = Math.sin(predator.patrolAngle) * patrolSpeed;
+                
+                // Smooth transition to patrol velocity
+                predator.vx += (targetVx - predator.vx) * 0.05;
+                predator.vy += (targetVy - predator.vy) * 0.05;
             }
             
             predator.x += predator.vx;
@@ -330,42 +359,62 @@ class Game {
     checkCollisions() {
         // Check jellyfish collisions
         this.jellyfish.forEach(jelly => {
-            this.player.fishPositions.forEach(fish => {
-                const dx = fish.x - jelly.x;
-                const dy = fish.y - jelly.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+            // Only apply damage if cooldown has expired
+            if (jelly.damageCooldown <= 0) {
+                let collisionDetected = false;
                 
-                if (dist < jelly.size) {
-                    this.fishCount = Math.max(0, this.fishCount - CONFIG.COLLISION_DAMAGE);
-                    // Push fish away
-                    fish.vx += (dx / dist) * 5;
-                    fish.vy += (dy / dist) * 5;
+                this.player.fishPositions.forEach(fish => {
+                    const dx = fish.x - jelly.x;
+                    const dy = fish.y - jelly.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (this.fishCount <= 0) {
-                        this.gameOver('All your fish were stung by jellyfish!');
+                    if (dist < jelly.size) {
+                        if (!collisionDetected) {
+                            // Apply damage only once per jellyfish per cooldown period
+                            this.fishCount = Math.max(0, this.fishCount - CONFIG.COLLISION_DAMAGE);
+                            jelly.damageCooldown = 1.0; // 1 second cooldown
+                            collisionDetected = true;
+                            
+                            if (this.fishCount <= 0) {
+                                this.gameOver('All your fish were stung by jellyfish!');
+                            }
+                        }
+                        // Push fish away regardless
+                        fish.vx += (dx / dist) * 5;
+                        fish.vy += (dy / dist) * 5;
                     }
-                }
-            });
+                });
+            }
         });
         
         // Check predator collisions
         this.predators.forEach(predator => {
-            this.player.fishPositions.forEach(fish => {
-                const dx = fish.x - predator.x;
-                const dy = fish.y - predator.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+            // Only apply damage if cooldown has expired
+            if (predator.huntCooldown <= 0) {
+                let collisionDetected = false;
                 
-                if (dist < predator.size) {
-                    this.fishCount = Math.max(0, this.fishCount - CONFIG.COLLISION_DAMAGE);
-                    // Push fish away
-                    fish.vx += (dx / dist) * 8;
-                    fish.vy += (dy / dist) * 8;
+                this.player.fishPositions.forEach(fish => {
+                    const dx = fish.x - predator.x;
+                    const dy = fish.y - predator.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (this.fishCount <= 0) {
-                        this.gameOver('Your school was eaten by predators!');
+                    if (dist < predator.size) {
+                        if (!collisionDetected) {
+                            // Apply damage only once per predator per cooldown period
+                            this.fishCount = Math.max(0, this.fishCount - CONFIG.COLLISION_DAMAGE);
+                            predator.huntCooldown = 1.0; // 1 second cooldown
+                            collisionDetected = true;
+                            
+                            if (this.fishCount <= 0) {
+                                this.gameOver('Your school was eaten by predators!');
+                            }
+                        }
+                        // Push fish away regardless
+                        fish.vx += (dx / dist) * 8;
+                        fish.vy += (dy / dist) * 8;
                     }
-                }
-            });
+                });
+            }
         });
         
         // Check plankton collection
