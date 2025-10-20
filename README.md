@@ -1,4 +1,13 @@
-# 🐦 Seabird Foraging Game
+# 🌊 Marine Ecology Games
+
+Two educational games about marine ecosystems:
+
+1. **🐦 Seabird Foraging Game** - A puzzle game about seabird ecology and parental care
+2. **🐟 Ocean Survival Game** - An action-survival game about larval fish avoiding predators
+
+## Games
+
+### 🐦 Seabird Foraging Game (`index.html`)
 
 A mobile-friendly educational puzzle game about seabird ecology, parental care, and marine ecosystem dynamics.
 
@@ -20,10 +29,29 @@ A mobile-friendly educational puzzle game about seabird ecology, parental care, 
 
 Autonomous fishing boats compete for the same fish! They spawn from the port, navigate directly to nearby fish, and return when their hold is full (3 fish capacity).
 
-## 🚀 Running the Game
+### 🐟 Ocean Survival Game (`ocean-game.html`)
+
+A fast-paced action game inspired by Vampire Survivors where you control a school of 100 larval fish trying to survive in the ocean.
+
+#### Gameplay
+
+- Control a school of 100 larval fish using arrow keys or WASD
+- Avoid jellyfish and predator fish that will attack your school
+- Collect plankton to prevent starvation
+- Survive for 5 minutes with at least 1 fish remaining to win!
+
+#### Features
+
+- Real-time flocking behavior for realistic fish school movement
+- Multiple enemy types with different AI behaviors
+- Hunger system requiring constant food collection
+- Canvas-based graphics with smooth animations
+- Keyboard controls (Arrow keys or WASD)
+
+## 🚀 Running the Games
 
 1. Clone this repository
-2. Open `index.html` in a web browser, or 
+2. Open `index.html` for the Seabird Foraging Game or `ocean-game.html` for the Ocean Survival Game in a web browser, or 
 3. Run a local server: `python3 -m http.server 8000` and visit `http://localhost:8000`
 
 ## 📱 Mobile Optimized
@@ -46,10 +74,17 @@ The game includes easily adjustable settings in `game.js`:
 
 ## 🛠️ Technologies
 
+### Seabird Foraging Game
 - HTML5
 - CSS3 with responsive design
 - Vanilla JavaScript
 - Emoji sprites for all game elements
+
+### Ocean Survival Game
+- HTML5 Canvas for rendering
+- CSS3 for UI styling
+- Vanilla JavaScript with object-oriented design
+- Real-time animation and physics
 
 ## 🎯 Educational Goals
 

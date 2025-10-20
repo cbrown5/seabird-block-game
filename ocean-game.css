@@ -1,0 +1,211 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(180deg, #001f3f 0%, #003366 50%, #004080 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.game-container {
+    width: 100%;
+    max-width: 900px;
+    height: 100vh;
+    max-height: 700px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.game-header {
+    background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+    color: white;
+    padding: 15px 20px;
+    border-bottom: 3px solid #003366;
+}
+
+.game-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.stats-bar {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.stat-label {
+    opacity: 0.9;
+}
+
+.hunger-bar {
+    width: 120px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.hunger-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #00ff00 0%, #88ff00 50%, #ffff00 100%);
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.hunger-fill.low {
+    background: linear-gradient(90deg, #ff8800 0%, #ff4400 100%);
+}
+
+.hunger-fill.critical {
+    background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%);
+    animation: pulse-hunger 0.5s infinite;
+}
+
+@keyframes pulse-hunger {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+#game-canvas {
+    flex: 1;
+    background: linear-gradient(180deg, #003d5c 0%, #002040 100%);
+    display: block;
+    cursor: none;
+}
+
+.instructions {
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.instructions p {
+    margin: 4px 0;
+}
+
+.game-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.overlay-content {
+    background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+    color: white;
+}
+
+.overlay-content h2 {
+    margin-bottom: 20px;
+    font-size: 2.5rem;
+}
+
+.overlay-content p {
+    margin-bottom: 30px;
+    font-size: 1.2rem;
+    line-height: 1.5;
+}
+
+#restart-button {
+    background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+    color: white;
+    border: none;
+    padding: 15px 35px;
+    border-radius: 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+#restart-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 255, 136, 0.5);
+}
+
+#restart-button:active {
+    transform: scale(0.95);
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+    .game-container {
+        max-width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .game-header h1 {
+        font-size: 1.4rem;
+    }
+
+    .stats-bar {
+        gap: 10px;
+    }
+
+    .stat {
+        font-size: 0.9rem;
+    }
+
+    .hunger-bar {
+        width: 80px;
+    }
+
+    .instructions {
+        font-size: 0.75rem;
+        padding: 8px 15px;
+    }
+
+    .overlay-content {
+        padding: 30px;
+    }
+
+    .overlay-content h2 {
+        font-size: 2rem;
+    }
+
+    .overlay-content p {
+        font-size: 1rem;
+    }
+}
