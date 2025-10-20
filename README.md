@@ -2,8 +2,14 @@
 
 Two educational games about marine ecosystems:
 
-1. **🐦 Seabird Foraging Game** - A puzzle game about seabird ecology and parental care
-2. **🐟 Ocean Survival Game** - An action-survival game about larval fish avoiding predators
+1. **🐦 [Seabird Foraging Game](https://www.seascapemodels.org/seabird-block-game)** - A puzzle game about seabird ecology and parental care
+2. **🐟 [Ocean Survival Game](https://www.seascapemodels.org/seabird-block-game/ocean-game)** - An action-survival game about larval fish avoiding predators
+
+## TODO, improvements
+
+Seabird game - add levels (with increasing boats or reducing port distance) and rewards when level completed. Make it a bit easier at the start
+Ocean survival game - Predator dynamcis need work, they are not chasing the fish. Larval fish should be more spread out as well. Add sounds and levels. 
+
 
 ## Games
 
