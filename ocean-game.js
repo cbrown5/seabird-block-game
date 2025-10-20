@@ -4,7 +4,7 @@ const CONFIG = {
     GAME_DURATION: 300, // 5 minutes in seconds
     PLAYER_SPEED: 3,
     JELLYFISH_SPEED: 1.5,
-    PREDATOR_SPEED: 0.5,
+    PREDATOR_SPEED: 0.01,
     JELLYFISH_COUNT: 8,
     PREDATOR_COUNT: 1,
     PLANKTON_COUNT: 15,
