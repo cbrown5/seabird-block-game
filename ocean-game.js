@@ -88,9 +88,10 @@ class Game {
         audioPrompt.style.zIndex = '1000';
         audioPrompt.style.cursor = 'pointer';
         audioPrompt.innerHTML = `
-            <h2>Click to Enable Sound</h2>
-            <p>This game includes sound effects.</p>
-            <button id="enable-audio-btn" style="padding: 10px 20px; font-size: 18px; margin-top: 20px;">Start Game with Sound</button>
+            <h2>Click to Start Game</h2>
+            <p> The aim is to survive with at least on larva left after 5 minutes.</p>
+            <p> Use arrow keys to avoid predators and collect plankton to avoid starving.</p>
+            <button id="enable-audio-btn" style="padding: 10px 20px; font-size: 18px; margin-top: 20px;">Start </button>
         `;
         document.body.appendChild(audioPrompt);
         
