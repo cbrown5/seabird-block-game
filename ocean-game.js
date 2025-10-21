@@ -398,6 +398,9 @@ class Game {
             vy: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
             size: 20 + Math.random() * 15,
             pulsePhase: Math.random() * Math.PI * 2,
+            // per-jelly control for tentacle waving
+            tentacleWavePhase: Math.random() * Math.PI * 2,
+            tentacleOffsets: Array.from({length: 6}, () => Math.random() * Math.PI * 2),
             damageCooldown: 0 // Cooldown timer to prevent multiple rapid hits
         });
     }
@@ -615,6 +618,8 @@ class Game {
             
             // Update pulse phase
             jelly.pulsePhase += dt * 2;
+            // Update tentacle wave phase (faster than bell pulse for visible motion)
+            jelly.tentacleWavePhase += dt * 3;
             
             // Update damage cooldown
             if (jelly.damageCooldown > 0) {
@@ -825,24 +830,37 @@ class Game {
         const pulse = Math.sin(jelly.pulsePhase) * 0.2 + 1;
         const size = jelly.size * pulse;
         
-        // Body
+        // Body (bell)
         this.ctx.fillStyle = 'rgba(255, 100, 200, 0.6)';
         this.ctx.beginPath();
         this.ctx.arc(jelly.x, jelly.y, size, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Tentacles
-        this.ctx.strokeStyle = 'rgba(255, 100, 200, 0.4)';
-        this.ctx.lineWidth = 2;
+        // Tentacles: draw as waving quadratic curves
+        this.ctx.strokeStyle = 'rgba(255, 100, 200, 0.45)';
         for (let i = 0; i < 6; i++) {
             const angle = (i / 6) * Math.PI * 2;
-            this.ctx.beginPath();
-            this.ctx.moveTo(jelly.x, jelly.y);
             const tentacleLength = size * 1.5;
-            this.ctx.lineTo(
-                jelly.x + Math.cos(angle) * tentacleLength,
-                jelly.y + Math.sin(angle) * tentacleLength
-            );
+            
+            // start a bit out from the bell edge for a nicer join
+            const startX = jelly.x + Math.cos(angle) * size * 0.6;
+            const startY = jelly.y + Math.sin(angle) * size * 0.6;
+            
+            // end point of the tentacle
+            const endX = jelly.x + Math.cos(angle) * tentacleLength;
+            const endY = jelly.y + Math.sin(angle) * tentacleLength;
+            
+            // waving control point: perpendicular wobble using per-tentacle offset + global phase
+            const wobble = Math.sin(jelly.tentacleWavePhase + (jelly.tentacleOffsets ? jelly.tentacleOffsets[i] : i));
+            const perpAngle = angle + Math.PI / 2;
+            const controlDist = tentacleLength * 0.4;
+            const controlX = jelly.x + Math.cos(angle) * (tentacleLength * 0.5) + Math.cos(perpAngle) * controlDist * wobble;
+            const controlY = jelly.y + Math.sin(angle) * (tentacleLength * 0.5) + Math.sin(perpAngle) * controlDist * wobble;
+            
+            this.ctx.lineWidth = 2 * (0.8 + 0.4 * (1 - Math.abs(wobble))); // subtle thickness variation
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, startY);
+            this.ctx.quadraticCurveTo(controlX, controlY, endX, endY);
             this.ctx.stroke();
         }
         
@@ -854,6 +872,9 @@ class Game {
         this.ctx.beginPath();
         this.ctx.arc(jelly.x, jelly.y, size * 1.5, 0, Math.PI * 2);
         this.ctx.fill();
+        
+        // restore lineWidth to default (in case other draws rely on it)
+        this.ctx.lineWidth = 1;
     }
     
     drawPredator(predator) {
