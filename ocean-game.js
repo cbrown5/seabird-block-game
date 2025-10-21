@@ -6,11 +6,13 @@ const CONFIG = {
     JELLYFISH_SPEED: 1.5,
     PREDATOR_SPEED: 1.5, // Reduced from direct targeting to slower pursuit
     PREDATOR_DETECTION_RANGE: 150, // Predators only hunt when fish are within this distance
-    JELLYFISH_COUNT: 8,
-    PREDATOR_COUNT: 3,
+    INITIAL_JELLYFISH_COUNT: 2, // Start with fewer jellyfish
+    MAX_JELLYFISH_COUNT: 12, // Maximum jellyfish count
+    MAX_PREDATOR_COUNT: 5, // Maximum predators (start with 0)
     PLANKTON_COUNT: 15,
     FISH_SIZE: 3,
     SCHOOL_SPREAD: 200,
+    SCHOOL_CLUSTER_SPREAD: 0.4, // Controls how clustered fish are (0-1, lower = more spread)
     HUNGER_RATE: 0.05, // Hunger increases per second
     HUNGER_MAX: 100,
     PLANKTON_NUTRITION: 30,
@@ -29,6 +31,7 @@ class Game {
         this.fishCount = CONFIG.INITIAL_FISH_COUNT;
         this.timeRemaining = CONFIG.GAME_DURATION;
         this.hunger = 0;
+        this.elapsedTime = 0; // Track elapsed time for progressive difficulty
         
         // Player
         this.player = {
@@ -51,6 +54,9 @@ class Game {
         this.lastTime = 0;
         this.animationId = null;
         
+        // Sound effects
+        this.sounds = this.initSounds();
+        
         this.init();
     }
     
@@ -58,6 +64,132 @@ class Game {
         const rect = this.canvas.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = rect.height;
+    }
+    
+    initSounds() {
+        // Create AudioContext for sound effects
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        
+        return {
+            audioCtx: audioCtx,
+            
+            // Play a simple tone
+            playTone: (frequency, duration, volume = 0.1) => {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + duration);
+            },
+            
+            // Plankton collection sound
+            collectPlankton: () => {
+                const audioCtx = this.sounds.audioCtx;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            },
+            
+            // Collision/damage sound
+            collision: () => {
+                const audioCtx = this.sounds.audioCtx;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                oscillator.type = 'sawtooth';
+                
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            },
+            
+            // Victory sound
+            victory: () => {
+                const audioCtx = this.sounds.audioCtx;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                // Play a series of ascending notes
+                const notes = [523, 659, 784, 1047]; // C, E, G, C
+                notes.forEach((freq, i) => {
+                    setTimeout(() => {
+                        const oscillator = audioCtx.createOscillator();
+                        const gainNode = audioCtx.createGain();
+                        
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioCtx.destination);
+                        
+                        oscillator.frequency.value = freq;
+                        oscillator.type = 'sine';
+                        
+                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                        
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.3);
+                    }, i * 150);
+                });
+            },
+            
+            // Game over sound
+            gameOver: () => {
+                const audioCtx = this.sounds.audioCtx;
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                // Play a descending tone
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+                oscillator.type = 'triangle';
+                
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.5);
+            }
+        };
     }
     
     init() {
@@ -105,41 +237,62 @@ class Game {
     
     spawnJellyfish() {
         this.jellyfish = [];
-        for (let i = 0; i < CONFIG.JELLYFISH_COUNT; i++) {
-            this.jellyfish.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                vx: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
-                vy: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
-                size: 20 + Math.random() * 15,
-                pulsePhase: Math.random() * Math.PI * 2,
-                damageCooldown: 0 // Cooldown timer to prevent multiple rapid hits
-            });
+        // Start with initial jellyfish count
+        const count = this.getCurrentJellyfishCount();
+        for (let i = 0; i < count; i++) {
+            this.addJellyfish();
         }
+    }
+    
+    addJellyfish() {
+        this.jellyfish.push({
+            x: Math.random() * this.canvas.width,
+            y: Math.random() * this.canvas.height,
+            vx: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
+            vy: (Math.random() - 0.5) * CONFIG.JELLYFISH_SPEED,
+            size: 20 + Math.random() * 15,
+            pulsePhase: Math.random() * Math.PI * 2,
+            damageCooldown: 0 // Cooldown timer to prevent multiple rapid hits
+        });
     }
     
     spawnPredators() {
         this.predators = [];
-        for (let i = 0; i < CONFIG.PREDATOR_COUNT; i++) {
-            // Spawn predators at edges
-            const edge = Math.floor(Math.random() * 4);
-            let x, y;
-            switch(edge) {
-                case 0: x = Math.random() * this.canvas.width; y = -30; break;
-                case 1: x = this.canvas.width + 30; y = Math.random() * this.canvas.height; break;
-                case 2: x = Math.random() * this.canvas.width; y = this.canvas.height + 30; break;
-                case 3: x = -30; y = Math.random() * this.canvas.height; break;
-            }
-            this.predators.push({
-                x: x,
-                y: y,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: (Math.random() - 0.5) * 0.5,
-                size: 30 + Math.random() * 20,
-                huntCooldown: 0,
-                patrolAngle: Math.random() * Math.PI * 2 // Random patrol direction
-            });
+        // Start with 0 predators - they will spawn progressively
+    }
+    
+    addPredator() {
+        // Spawn predators at edges
+        const edge = Math.floor(Math.random() * 4);
+        let x, y;
+        switch(edge) {
+            case 0: x = Math.random() * this.canvas.width; y = -30; break;
+            case 1: x = this.canvas.width + 30; y = Math.random() * this.canvas.height; break;
+            case 2: x = Math.random() * this.canvas.width; y = this.canvas.height + 30; break;
+            case 3: x = -30; y = Math.random() * this.canvas.height; break;
         }
+        this.predators.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            size: 30 + Math.random() * 20,
+            huntCooldown: 0,
+            patrolAngle: Math.random() * Math.PI * 2 // Random patrol direction
+        });
+    }
+    
+    getCurrentPredatorCount() {
+        // Gradually increase from 0 to MAX_PREDATOR_COUNT over the game duration
+        const progress = this.elapsedTime / CONFIG.GAME_DURATION;
+        return Math.floor(progress * CONFIG.MAX_PREDATOR_COUNT);
+    }
+    
+    getCurrentJellyfishCount() {
+        // Gradually increase from INITIAL to MAX over the game duration
+        const progress = this.elapsedTime / CONFIG.GAME_DURATION;
+        return Math.floor(CONFIG.INITIAL_JELLYFISH_COUNT + 
+            progress * (CONFIG.MAX_JELLYFISH_COUNT - CONFIG.INITIAL_JELLYFISH_COUNT));
     }
     
     spawnPlankton() {
@@ -180,12 +333,17 @@ class Game {
         // Cap delta time to prevent huge jumps
         dt = Math.min(dt, 0.1);
         
-        // Update timer
+        // Update timer and elapsed time
         this.timeRemaining -= dt;
+        this.elapsedTime += dt;
+        
         if (this.timeRemaining <= 0) {
             this.win();
             return;
         }
+        
+        // Progressive difficulty: add predators and jellyfish over time
+        this.updateDifficulty();
         
         // Update hunger
         this.hunger += CONFIG.HUNGER_RATE * dt;
@@ -220,6 +378,20 @@ class Game {
         // Remove excess fish positions if count decreased
         while (this.player.fishPositions.length > Math.ceil(this.fishCount)) {
             this.player.fishPositions.pop();
+        }
+    }
+    
+    updateDifficulty() {
+        // Add predators progressively
+        const targetPredators = this.getCurrentPredatorCount();
+        while (this.predators.length < targetPredators) {
+            this.addPredator();
+        }
+        
+        // Add jellyfish progressively
+        const targetJellyfish = this.getCurrentJellyfishCount();
+        while (this.jellyfish.length < targetJellyfish) {
+            this.addJellyfish();
         }
     }
     
@@ -260,13 +432,14 @@ class Game {
             
             if (dist > 0) {
                 const force = Math.min(dist / CONFIG.SCHOOL_SPREAD, 1);
-                fish.vx += (dx / dist) * force * 0.5;
-                fish.vy += (dy / dist) * force * 0.5;
+                // Reduce clustering force with SCHOOL_CLUSTER_SPREAD parameter
+                fish.vx += (dx / dist) * force * 0.5 * CONFIG.SCHOOL_CLUSTER_SPREAD;
+                fish.vy += (dy / dist) * force * 0.5 * CONFIG.SCHOOL_CLUSTER_SPREAD;
             }
             
-            // Add some randomness
-            fish.vx += (Math.random() - 0.5) * 0.3;
-            fish.vy += (Math.random() - 0.5) * 0.3;
+            // Add some randomness for more natural spread
+            fish.vx += (Math.random() - 0.5) * 0.5;
+            fish.vy += (Math.random() - 0.5) * 0.5;
             
             // Apply velocity damping
             fish.vx *= 0.9;
@@ -375,6 +548,9 @@ class Game {
                             jelly.damageCooldown = 1.0; // 1 second cooldown
                             collisionDetected = true;
                             
+                            // Play collision sound
+                            this.sounds.collision();
+                            
                             if (this.fishCount <= 0) {
                                 this.gameOver('All your fish were stung by jellyfish!');
                             }
@@ -405,6 +581,9 @@ class Game {
                             predator.huntCooldown = 1.0; // 1 second cooldown
                             collisionDetected = true;
                             
+                            // Play collision sound
+                            this.sounds.collision();
+                            
                             if (this.fishCount <= 0) {
                                 this.gameOver('Your school was eaten by predators!');
                             }
@@ -432,6 +611,9 @@ class Game {
                     this.plankton.splice(i, 1);
                     // Spawn new plankton
                     this.spawnSinglePlankton();
+                    
+                    // Play collection sound
+                    this.sounds.collectPlankton();
                     break;
                 }
             }
@@ -627,6 +809,10 @@ class Game {
     gameOver(message) {
         this.running = false;
         cancelAnimationFrame(this.animationId);
+        
+        // Play game over sound
+        this.sounds.gameOver();
+        
         this.showOverlay('Game Over', message);
     }
     
@@ -634,6 +820,10 @@ class Game {
         this.running = false;
         cancelAnimationFrame(this.animationId);
         const fishLeft = Math.ceil(this.fishCount);
+        
+        // Play victory sound
+        this.sounds.victory();
+        
         this.showOverlay(
             'Victory!', 
             `You survived 5 minutes with ${fishLeft} fish remaining!`
@@ -653,6 +843,7 @@ class Game {
         this.fishCount = CONFIG.INITIAL_FISH_COUNT;
         this.timeRemaining = CONFIG.GAME_DURATION;
         this.hunger = 0;
+        this.elapsedTime = 0;
         
         // Reset player
         this.player.x = this.canvas.width / 2;
