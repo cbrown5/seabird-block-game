@@ -3,7 +3,7 @@ const CONFIG = {
     INITIAL_FISH_COUNT: 100,
     GAME_DURATION: 300, // 5 minutes in seconds
     PLAYER_SPEED: 3,
-    JELLYFISH_SPEED: 1.5,
+    JELLYFISH_SPEED: 1,
     PREDATOR_SPEED: 1.5, // Reduced from direct targeting to slower pursuit
     PREDATOR_DETECTION_RANGE: 150, // Predators only hunt when fish are within this distance
     INITIAL_JELLYFISH_COUNT: 2, // Start with fewer jellyfish
@@ -12,12 +12,12 @@ const CONFIG = {
     PLANKTON_COUNT: 15,
     FISH_SIZE: 3,
     SCHOOL_SPREAD: 200,
-    SCHOOL_CLUSTER_SPREAD: 0.4, // Controls how clustered fish are (0-1, lower = more spread)
-    HUNGER_RATE: 0.05, // Hunger increases per second
+    SCHOOL_CLUSTER_SPREAD: 0.2, // Controls how clustered fish are (0-1, lower = more spread)
+    HUNGER_RATE: 10, // Hunger increases per second
     HUNGER_MAX: 100,
     PLANKTON_NUTRITION: 30,
     COLLISION_DAMAGE: 5, // Fish lost per collision
-    STARVATION_DAMAGE: 0.2, // Fish lost per second when starving
+    STARVATION_DAMAGE: 1, // Fish lost per second when starving
 };
 
 class Game {
@@ -67,18 +67,29 @@ class Game {
     }
     
     initSounds() {
-        // Create AudioContext for sound effects
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContext();
+        // Lazy audio context creation to avoid browser autoplay restrictions.
+        let audioCtx = null;
+        const ensureAudioCtx = async () => {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                try {
+                    await audioCtx.resume();
+                } catch (e) {
+                    // ignore; will try again on next user gesture or sound call
+                }
+            }
+            return audioCtx;
+        };
         
         return {
-            audioCtx: audioCtx,
+            ensureAudioCtx,
             
             // Play a simple tone
-            playTone: (frequency, duration, volume = 0.1) => {
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
+            playTone: async (frequency, duration, volume = 0.1) => {
+                const audioCtx = await ensureAudioCtx();
                 
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
@@ -97,9 +108,8 @@ class Game {
             },
             
             // Plankton collection sound
-            collectPlankton: () => {
-                const audioCtx = this.sounds.audioCtx;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+            collectPlankton: async () => {
+                const audioCtx = await ensureAudioCtx();
                 
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
@@ -119,9 +129,8 @@ class Game {
             },
             
             // Collision/damage sound
-            collision: () => {
-                const audioCtx = this.sounds.audioCtx;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+            collision: async () => {
+                const audioCtx = await ensureAudioCtx();
                 
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
@@ -141,14 +150,14 @@ class Game {
             },
             
             // Victory sound
-            victory: () => {
-                const audioCtx = this.sounds.audioCtx;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+            victory: async () => {
+                const audioCtx = await ensureAudioCtx();
                 
                 // Play a series of ascending notes
                 const notes = [523, 659, 784, 1047]; // C, E, G, C
                 notes.forEach((freq, i) => {
-                    setTimeout(() => {
+                    setTimeout(async () => {
+                        // use the same resumed context
                         const oscillator = audioCtx.createOscillator();
                         const gainNode = audioCtx.createGain();
                         
@@ -168,11 +177,9 @@ class Game {
             },
             
             // Game over sound
-            gameOver: () => {
-                const audioCtx = this.sounds.audioCtx;
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+            gameOver: async () => {
+                const audioCtx = await ensureAudioCtx();
                 
-                // Play a descending tone
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
                 
@@ -216,6 +223,15 @@ class Game {
         document.getElementById('restart-button').addEventListener('click', () => {
             this.restart();
         });
+        
+        // Unlock audio on first user gesture (helps browsers allow audio immediately)
+        const resumeAudio = () => {
+            if (this.sounds && this.sounds.ensureAudioCtx) {
+                this.sounds.ensureAudioCtx();
+            }
+        };
+        document.addEventListener('pointerdown', resumeAudio, { once: true });
+        document.addEventListener('keydown', resumeAudio, { once: true });
         
         // Start game
         this.start();
