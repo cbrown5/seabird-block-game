@@ -17,7 +17,7 @@ const CONFIG = {
     HUNGER_MAX: 100,
     PLANKTON_NUTRITION: 30,
     COLLISION_DAMAGE: 5, // Fish lost per collision
-    STARVATION_DAMAGE: 1, // Fish lost per second when starving
+    STARVATION_DAMAGE: 5, // Fish lost per second when starving
 };
 
 class Game {
@@ -66,6 +66,16 @@ class Game {
             lastTime: 0,
             // Added message state
             message: null // { text, age, duration, opacity }
+        };
+
+        // Game over animation/message state
+        this.gameOverAnimation = {
+            active: false,
+            message: '',
+            age: 0,
+            opacity: 0,
+            rafId: null,
+            lastTime: 0
         };
         
         // Add an audio prompt overlay
@@ -991,205 +1001,102 @@ class Game {
         // Play game over sound
         this.sounds.gameOver();
         
+        // Start canvas game-over message animation
+        this.startGameOverAnimation(message);
+        
         this.showOverlay('Game Over', message);
     }
-    
-    win() {
-        this.running = false;
-        cancelAnimationFrame(this.animationId);
-        const fishLeft = Math.ceil(this.fishCount);
-        
-        // Play victory sound
-        this.sounds.victory();
-        
-        // Start a short celebration animation of a happy fish swimming away
-        this.startVictoryAnimation();
-        
-        this.showOverlay(
-            'Victory!', 
-            `You survived 5 minutes with ${fishLeft} fish remaining!`
-        );
-    }
-    
-    // Start the victory animation: spawns a happy fish at the school's center and begins its RAF loop
-    startVictoryAnimation() {
-        if (this.victoryAnimation.active) return;
-        this.victoryAnimation.active = true;
-        this.victoryAnimation.lastTime = performance.now();
-        
-        // Initialize a happy fish starting at the school center
-        this.victoryAnimation.fish = {
-            x: this.player.x,
-            y: this.player.y,
-            vx: 60 + Math.random() * 40, // px/sec to the right
-            vy: -10 + Math.random() * -20, // slight upward drift
-            size: CONFIG.FISH_SIZE * 10,
-            tailPhase: Math.random() * Math.PI * 2,
-            bobPhase: Math.random() * Math.PI * 2,
-            rotation: 0
-        };
 
-        // Initialize victory message
-        this.victoryAnimation.message = {
-            text: 'You survived! Great job!',
-            age: 0,
-            duration: 2.0, // seconds before starting to fade
-            fadeDuration: 1.5,
-            opacity: 1
-        };
-        
-        const loop = (t) => this.victoryLoop(t);
-        this.victoryAnimation.rafId = requestAnimationFrame(loop);
+    // Start a simple game-over message animation (fades in and holds until restart)
+    startGameOverAnimation(message) {
+        const ga = this.gameOverAnimation;
+        if (ga.active) return;
+        ga.active = true;
+        ga.message = message || 'Game Over';
+        ga.age = 0;
+        ga.opacity = 0;
+        ga.lastTime = performance.now();
+        ga.rafId = requestAnimationFrame((t) => this.gameOverLoop(t));
     }
-    
-    victoryLoop(currentTime = 0) {
-        if (!this.victoryAnimation.active) return;
-        const va = this.victoryAnimation;
-        const dt = Math.min((currentTime - va.lastTime) / 1000, 0.05);
-        va.lastTime = currentTime;
-        
-        // Update fish motion
-        this.updateVictoryAnimation(dt);
-        
-        // Update message timing/opacities
-        if (va.message) {
-            va.message.age += dt;
-            if (va.message.age >= va.message.duration) {
-                const t = (va.message.age - va.message.duration) / Math.max(0.0001, va.message.fadeDuration);
-                va.message.opacity = Math.max(0, 1 - t);
-            }
-        }
-        
-        // Render base scene then draw victory fish and message on top
-        this.render();
-        this.drawVictoryAnimation();
-        
-        // Continue until fish is off screen and message fully faded (then stop)
-        const fish = va.fish;
-        const messageGone = !va.message || va.message.opacity <= 0;
-        if (fish && (fish.x < this.canvas.width + fish.size && fish.y > -100) || !messageGone) {
-            va.rafId = requestAnimationFrame((t) => this.victoryLoop(t));
+
+    gameOverLoop(currentTime = 0) {
+        const ga = this.gameOverAnimation;
+        if (!ga.active) return;
+        const dt = Math.min((currentTime - ga.lastTime) / 1000, 0.05);
+        ga.lastTime = currentTime;
+        ga.age += dt;
+
+        // Fade in over 0.6s
+        const fadeIn = 0.6;
+        if (ga.age < fadeIn) {
+            ga.opacity = ga.age / fadeIn;
         } else {
-            this.stopVictoryAnimation();
+            ga.opacity = 1;
         }
+
+        // Render base scene then draw game over message on top
+        this.render();
+        this.drawGameOverMessage();
+
+        // Continue until explicitly stopped (restart)
+        ga.rafId = requestAnimationFrame((t) => this.gameOverLoop(t));
     }
-    
-    updateVictoryAnimation(dt) {
-        const fish = this.victoryAnimation.fish;
-        if (!fish) return;
-        
-        // Gentle acceleration to the right and upward easing
-        fish.x += fish.vx * dt;
-        fish.y += fish.vy * dt;
-        
-        // Slow downward gravity effect reduction so it keeps drifting slightly upward initially
-        fish.vy += 8 * dt * 0.1;
-        
-        // Tail and bob phases for visual motion
-        fish.tailPhase += dt * 12;
-        fish.bobPhase += dt * 2;
-        
-        // gentle rotation based on velocity direction
-        fish.rotation = Math.atan2(fish.vy, fish.vx) * 0.6;
-    }
-    
-    drawVictoryAnimation() {
-        const fish = this.victoryAnimation.fish;
-        if (!fish && !this.victoryAnimation.message) return;
+
+    drawGameOverMessage() {
+        const ga = this.gameOverAnimation;
+        if (!ga || !ga.active) return;
         const ctx = this.ctx;
-        
-        // Draw message behind/above fish (if present)
-        const msg = this.victoryAnimation.message;
-        if (msg && msg.opacity > 0) {
-            ctx.save();
-            const opacity = Math.max(0, Math.min(1, msg.opacity));
-            ctx.globalAlpha = opacity;
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(0,0,0,0.6)';
-            ctx.shadowBlur = 12;
-            ctx.font = `bold 36px sans-serif`;
-            
-            // Position message near top-center (slightly below overlay to remain visible)
-            const text = msg.text;
-            const x = this.canvas.width / 2;
-            const y = Math.max(60, this.canvas.height * 0.18);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, x, y);
-            ctx.restore();
-        }
-        
-        if (!fish) return;
-        
         ctx.save();
-        ctx.translate(fish.x, fish.y + Math.sin(fish.bobPhase) * 6);
-        ctx.rotate(fish.rotation);
-        
-        // Body
-        ctx.fillStyle = '#66ccff';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, fish.size, fish.size * 0.7, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Tail wagging (two triangles) using tailPhase sine
-        const wag = Math.sin(fish.tailPhase) * (fish.size * 0.25);
-        ctx.fillStyle = '#4fb0e6';
-        ctx.beginPath();
-        ctx.moveTo(-fish.size, 0);
-        ctx.lineTo(-fish.size - fish.size * 0.6, -fish.size * 0.4 + wag);
-        ctx.lineTo(-fish.size - fish.size * 0.6, fish.size * 0.4 + wag);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Eye (happy)
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(fish.size * 0.35, -fish.size * 0.18, fish.size * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000000';
-        ctx.beginPath();
-        ctx.arc(fish.size * 0.38, -fish.size * 0.18, fish.size * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Smile
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(fish.size * 0.25, fish.size * 0.05, fish.size * 0.18, 0.2 * Math.PI, 0.8 * Math.PI);
-        ctx.stroke();
-        
-        // small bubble trail
-        for (let i = 0; i < 3; i++) {
-            const bx = -i * 12 - (performance.now() / 40 % 12);
-            const by = -Math.abs(Math.sin((performance.now() / 300) + i)) * 8 - 8 - i * 6;
-            ctx.globalAlpha = 0.6 - i * 0.18;
-            ctx.fillStyle = 'rgba(200,230,255,0.9)';
-            ctx.beginPath();
-            ctx.arc(bx, by, Math.max(1.5, 4 - i), 0, Math.PI * 2);
-            ctx.fill();
-        }
+
+        // backdrop glow
+        ctx.globalAlpha = ga.opacity * 0.9;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         ctx.globalAlpha = 1;
-        
+
+        // message text
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, ga.opacity));
+        ctx.fillStyle = '#ffdddd';
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowBlur = 18;
+        ctx.font = `bold 48px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const x = this.canvas.width / 2;
+        const y = this.canvas.height / 2 - 20;
+        ctx.fillText('Game Over', x, y);
+
+        // sub-message (reason)
+        ctx.font = `22px sans-serif`;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 10;
+        ctx.fillText(ga.message, x, y + 48);
+        ctx.restore();
+
         ctx.restore();
     }
-    
-    stopVictoryAnimation() {
-        const va = this.victoryAnimation;
-        if (!va.active) return;
-        va.active = false;
-        if (va.rafId) {
-            cancelAnimationFrame(va.rafId);
-            va.rafId = null;
+
+    stopGameOverAnimation() {
+        const ga = this.gameOverAnimation;
+        if (!ga.active) return;
+        ga.active = false;
+        if (ga.rafId) {
+            cancelAnimationFrame(ga.rafId);
+            ga.rafId = null;
         }
-        va.fish = null;
-        va.message = null;
+        ga.message = '';
+        ga.age = 0;
+        ga.opacity = 0;
     }
-    
+
     restart() {
         document.getElementById('game-overlay').style.display = 'none';
         
         // Stop any active victory animation
         this.stopVictoryAnimation();
+        // Stop any active game over animation
+        this.stopGameOverAnimation();
         
         // Reset game state
         this.fishCount = CONFIG.INITIAL_FISH_COUNT;
