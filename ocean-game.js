@@ -55,7 +55,11 @@ class Game {
         this.animationId = null;
         
         // Sound effects
+        this.audioInitialized = false;
         this.sounds = this.initSounds();
+        
+        // Add an audio prompt overlay
+        this.createAudioPrompt();
         
         this.init();
     }
@@ -66,9 +70,77 @@ class Game {
         this.canvas.height = rect.height;
     }
     
+    createAudioPrompt() {
+        // Create audio prompt overlay
+        const audioPrompt = document.createElement('div');
+        audioPrompt.id = 'audio-prompt';
+        audioPrompt.style.position = 'absolute';
+        audioPrompt.style.top = '0';
+        audioPrompt.style.left = '0';
+        audioPrompt.style.width = '100%';
+        audioPrompt.style.height = '100%';
+        audioPrompt.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        audioPrompt.style.color = 'white';
+        audioPrompt.style.display = 'flex';
+        audioPrompt.style.flexDirection = 'column';
+        audioPrompt.style.justifyContent = 'center';
+        audioPrompt.style.alignItems = 'center';
+        audioPrompt.style.zIndex = '1000';
+        audioPrompt.style.cursor = 'pointer';
+        audioPrompt.innerHTML = `
+            <h2>Click to Enable Sound</h2>
+            <p>This game includes sound effects.</p>
+            <button id="enable-audio-btn" style="padding: 10px 20px; font-size: 18px; margin-top: 20px;">Start Game with Sound</button>
+        `;
+        document.body.appendChild(audioPrompt);
+        
+        // Add click event to enable audio
+        document.getElementById('enable-audio-btn').addEventListener('click', () => {
+            this.unlockAudio().then(() => {
+                audioPrompt.style.display = 'none';
+                this.start();
+            });
+        });
+    }
+    
+    unlockAudio() {
+        return new Promise(async (resolve) => {
+            // Create and play a short sound to unlock audio
+            try {
+                await this.sounds.ensureAudioCtx();
+                
+                // Play a silent sound to fully unlock audio
+                const audioCtx = await this.sounds.ensureAudioCtx();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // Set volume to 0
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.1);
+                
+                this.audioInitialized = true;
+                
+                // Wait a short time to ensure the audio system is ready
+                setTimeout(() => {
+                    resolve();
+                }, 100);
+            } catch (e) {
+                console.error('Audio unlock failed:', e);
+                this.audioInitialized = false;
+                resolve(); // Resolve anyway to allow game to start
+            }
+        });
+    }
+    
     initSounds() {
         // Lazy audio context creation to avoid browser autoplay restrictions.
         let audioCtx = null;
+        let unlocked = false; // track whether we've played the unlock buffer
         const ensureAudioCtx = async () => {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -78,7 +150,26 @@ class Game {
                 try {
                     await audioCtx.resume();
                 } catch (e) {
+                    console.warn('Audio context resume failed:', e);
                     // ignore; will try again on next user gesture or sound call
+                }
+            }
+            // Play a very short silent buffer once to fully unlock audio on some browsers
+            if (!unlocked) {
+                try {
+                    const buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+                    const src = audioCtx.createBufferSource();
+                    src.buffer = buffer;
+                    src.connect(audioCtx.destination);
+                    src.start(0);
+                    // small timeout to allow the node to run
+                    setTimeout(() => {
+                        try { src.disconnect(); } catch (e) {}
+                    }, 50);
+                    unlocked = true;
+                } catch (e) {
+                    console.warn('Audio unlock failed:', e);
+                    // If this fails, don't block — subsequent user gestures may still unlock
                 }
             }
             return audioCtx;
@@ -89,112 +180,141 @@ class Game {
             
             // Play a simple tone
             playTone: async (frequency, duration, volume = 0.1) => {
-                const audioCtx = await ensureAudioCtx();
-                
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                oscillator.frequency.value = frequency;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-                
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + duration);
+                if (!this.audioInitialized) return;
+                try {
+                    const audioCtx = await ensureAudioCtx();
+                    
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + duration);
+                } catch (e) {
+                    console.warn('Error playing tone:', e);
+                }
             },
             
             // Plankton collection sound
             collectPlankton: async () => {
-                const audioCtx = await ensureAudioCtx();
-                
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.1);
+                if (!this.audioInitialized) return;
+                try {
+                    const audioCtx = await ensureAudioCtx();
+                    
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.1);
+                } catch (e) {
+                    console.warn('Error playing collectPlankton sound:', e);
+                }
             },
             
             // Collision/damage sound
             collision: async () => {
-                const audioCtx = await ensureAudioCtx();
-                
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
-                oscillator.type = 'sawtooth';
-                
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.2);
+                if (!this.audioInitialized) return;
+                try {
+                    const audioCtx = await ensureAudioCtx();
+                    
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                    oscillator.type = 'sawtooth';
+                    
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.2);
+                } catch (e) {
+                    console.warn('Error playing collision sound:', e);
+                }
             },
             
             // Victory sound
             victory: async () => {
-                const audioCtx = await ensureAudioCtx();
-                
-                // Play a series of ascending notes
-                const notes = [523, 659, 784, 1047]; // C, E, G, C
-                notes.forEach((freq, i) => {
-                    setTimeout(async () => {
-                        // use the same resumed context
-                        const oscillator = audioCtx.createOscillator();
-                        const gainNode = audioCtx.createGain();
-                        
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioCtx.destination);
-                        
-                        oscillator.frequency.value = freq;
-                        oscillator.type = 'sine';
-                        
-                        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-                        
-                        oscillator.start(audioCtx.currentTime);
-                        oscillator.stop(audioCtx.currentTime + 0.3);
-                    }, i * 150);
-                });
+                if (!this.audioInitialized) return;
+                try {
+                    const audioCtx = await ensureAudioCtx();
+                    
+                    // Play a series of ascending notes
+                    const notes = [523, 659, 784, 1047]; // C, E, G, C
+                    notes.forEach((freq, i) => {
+                        setTimeout(async () => {
+                            try {
+                                // use the same resumed context
+                                const oscillator = audioCtx.createOscillator();
+                                const gainNode = audioCtx.createGain();
+                                
+                                oscillator.connect(gainNode);
+                                gainNode.connect(audioCtx.destination);
+                                
+                                oscillator.frequency.value = freq;
+                                oscillator.type = 'sine';
+                                
+                                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                                
+                                oscillator.start(audioCtx.currentTime);
+                                oscillator.stop(audioCtx.currentTime + 0.3);
+                            } catch (e) {
+                                console.warn('Error playing victory note:', e);
+                            }
+                        }, i * 150);
+                    });
+                } catch (e) {
+                    console.warn('Error preparing victory sound:', e);
+                }
             },
             
             // Game over sound
             gameOver: async () => {
-                const audioCtx = await ensureAudioCtx();
-                
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                
-                oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
-                oscillator.type = 'triangle';
-                
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                
-                oscillator.start(audioCtx.currentTime);
-                oscillator.stop(audioCtx.currentTime + 0.5);
+                if (!this.audioInitialized) return;
+                try {
+                    const audioCtx = await ensureAudioCtx();
+                    
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+                    oscillator.type = 'triangle';
+                    
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.5);
+                } catch (e) {
+                    console.warn('Error playing gameOver sound:', e);
+                }
             }
         };
     }
@@ -215,13 +335,23 @@ class Game {
             if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
                 e.preventDefault();
             }
+            
+            // Try to unlock audio on any keypress
+            if (!this.audioInitialized) {
+                this.unlockAudio();
+            }
         });
         document.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
         
         document.getElementById('restart-button').addEventListener('click', () => {
-            this.restart();
+            // Ensure audio is initialized when restarting
+            if (!this.audioInitialized) {
+                this.unlockAudio().then(() => this.restart());
+            } else {
+                this.restart();
+            }
         });
         
         // Unlock audio on first user gesture (helps browsers allow audio immediately)
@@ -880,5 +1010,6 @@ class Game {
 
 // Initialize game when page loads
 window.addEventListener('DOMContentLoaded', () => {
-    new Game();
+    const game = new Game();
+    // Don't auto-start; wait for audio prompt interaction
 });
