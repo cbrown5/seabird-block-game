@@ -5,12 +5,12 @@ const CONFIG = {
     PLAYER_SPEED: 3,
     JELLYFISH_SPEED: 1.5,
     PREDATOR_SPEED: 1.5, // Reduced from direct targeting to slower pursuit
-    PREDATOR_DETECTION_RANGE: 250, // Predators only hunt when fish are within this distance
+    PREDATOR_DETECTION_RANGE: 150, // Predators only hunt when fish are within this distance
     JELLYFISH_COUNT: 8,
     PREDATOR_COUNT: 3,
     PLANKTON_COUNT: 15,
     FISH_SIZE: 3,
-    SCHOOL_SPREAD: 300,
+    SCHOOL_SPREAD: 200,
     HUNGER_RATE: 0.05, // Hunger increases per second
     HUNGER_MAX: 100,
     PLANKTON_NUTRITION: 30,
