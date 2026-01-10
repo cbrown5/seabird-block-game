@@ -1,9 +1,10 @@
 # 🌊 Marine Ecology Games
 
-Two educational games about marine ecosystems:
+Three educational games about marine ecosystems:
 
 1. **🐦 [Seabird Foraging Game](https://www.seascapemodels.org/seabird-block-game)** - A puzzle game about seabird ecology and parental care
 2. **🐟 [Ocean Survival Game](https://www.seascapemodels.org/seabird-block-game/ocean-game)** - An action-survival game about larval fish avoiding predators
+3. **🚣 [River Data Collection Game](https://www.seascapemodels.org/seabird-block-game/river-game)** - An educational game about collecting balanced ecological data from river habitats
 
 ## TODO, improvements
 
@@ -54,11 +55,37 @@ A fast-paced action game inspired by Vampire Survivors where you control a schoo
 - Canvas-based graphics with smooth animations
 - Keyboard controls (Arrow keys or WASD)
 
+### 🚣 River Data Collection Game (`river-game.html`)
+
+An educational action game where you navigate a boat on a river to collect balanced ecological data samples from different habitat types.
+
+#### Gameplay
+
+- Control a boat using arrow keys, WASD, or touch/click controls
+- Collect data samples from 4 different habitat types: Forest 🌳, Mountain 🏔️, Beach 🏖️, and Grassland 🌾
+- Collect 3 samples of each habitat type to complete a level and progress
+- Avoid crocodiles 🐊 that can steal your collected data
+- Navigate through seaweed 🌿 that slows down your boat
+- Strategic risk-reward gameplay as seaweed grows near crocodiles
+
+#### Features
+
+- Progressive difficulty with more obstacles in higher levels
+- Real-time obstacle and data movement on the river
+- Speed monitoring system showing current boat speed
+- Text-based feedback for data collection and game events
+- Level-based progression with increasing challenges
+- Canvas-based rendering with emoji graphics
+- Mobile-friendly touch controls
+
 ## 🚀 Running the Games
 
 1. Clone this repository
-2. Open `index.html` for the Seabird Foraging Game or `ocean-game.html` for the Ocean Survival Game in a web browser, or 
-3. Run a local server: `python3 -m http.server 8000` and visit `http://localhost:8000`
+2. Open the desired game file in a web browser:
+   - `index.html` for the Seabird Foraging Game
+   - `ocean-game.html` for the Ocean Survival Game
+   - `river-game.html` for the River Data Collection Game
+3. Or run a local server: `python3 -m http.server 8000` and visit `http://localhost:8000`
 
 ## 📱 Mobile Optimized
 
@@ -92,6 +119,14 @@ The game includes easily adjustable settings in `game.js`:
 - Vanilla JavaScript with object-oriented design
 - Real-time animation and physics
 
+### River Data Collection Game
+- HTML5 Canvas for rendering
+- Embedded CSS3 styling
+- Vanilla JavaScript with game loop architecture
+- Emoji-based graphics
+- Touch and keyboard input support
+- Self-contained single-file implementation
+
 ## 🎯 Educational Goals
 
 Learn about:
@@ -99,3 +134,6 @@ Learn about:
 - Parental care and chick feeding schedules  
 - Impact of commercial fishing on marine ecosystems
 - Resource competition in ocean environments
+- Importance of balanced ecological data collection
+- Habitat diversity and data sampling strategies
+- Risk-reward decision making in field research
