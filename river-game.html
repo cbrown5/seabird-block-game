@@ -281,6 +281,10 @@
                 this.entangled = false;
                 this.entangleEndTime = 0;
 
+                // Feedback message
+                this.feedbackMessage = null;
+                this.feedbackEndTime = 0;
+
                 // Input
                 this.keys = {};
                 this.mousePos = null;
@@ -301,7 +305,20 @@
 
             init() {
                 this.setupInputHandlers();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                });
+                
                 this.startGame();
+            }
+
+            checkCollision(obj1, obj2, threshold) {
+                const dx = obj1.x - obj2.x;
+                const dy = obj1.y - obj2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                return dist < threshold;
             }
 
             setupInputHandlers() {
@@ -454,6 +471,11 @@
                     this.entangled = false;
                 }
 
+                // Check if feedback message has expired
+                if (this.feedbackMessage && Date.now() > this.feedbackEndTime) {
+                    this.feedbackMessage = null;
+                }
+
                 // Update boat based on input
                 const speed = this.entangled ? CONFIG.BOAT_SLOW_SPEED : CONFIG.BOAT_SPEED;
                 this.boat.vx = 0;
@@ -511,11 +533,7 @@
                 for (const habitat of this.habitats) {
                     if (habitat.collected) continue;
 
-                    const dx = this.boat.x - habitat.x;
-                    const dy = this.boat.y - habitat.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < CONFIG.BOAT_SIZE) {
+                    if (this.checkCollision(this.boat, habitat, CONFIG.BOAT_SIZE)) {
                         if (this.samples[habitat.type.name] < CONFIG.SAMPLES_PER_HABITAT) {
                             this.samples[habitat.type.name]++;
                             habitat.collected = true;
@@ -527,11 +545,7 @@
 
                 // Check collisions with seaweed
                 for (const weed of this.seaweed) {
-                    const dx = this.boat.x - weed.x;
-                    const dy = this.boat.y - weed.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < CONFIG.SEAWEED_SIZE) {
+                    if (this.checkCollision(this.boat, weed, CONFIG.SEAWEED_SIZE)) {
                         if (!this.entangled) {
                             this.entangled = true;
                             this.entangleEndTime = Date.now() + CONFIG.ENTANGLE_DURATION;
@@ -541,16 +555,14 @@
 
                 // Check collisions with crocodiles
                 for (const croc of this.crocodiles) {
-                    const dx = this.boat.x - croc.x;
-                    const dy = this.boat.y - croc.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < CONFIG.CROCODILE_SIZE) {
+                    if (this.checkCollision(this.boat, croc, CONFIG.CROCODILE_SIZE)) {
                         // Crocodile steals data
                         this.stealData();
-                        // Move crocodile away
+                        // Move crocodile away and keep in bounds
                         croc.x += (Math.random() - 0.5) * 100;
                         croc.y += (Math.random() - 0.5) * 100;
+                        croc.x = Math.max(20, Math.min(this.canvas.width - 20, croc.x));
+                        croc.y = Math.max(20, Math.min(this.canvas.height - 20, croc.y));
                     }
                 }
             }
@@ -571,8 +583,9 @@
             }
 
             showFeedback(message) {
-                // Simple feedback (could be enhanced with canvas text)
-                console.log(message);
+                // Show visual feedback message
+                this.feedbackMessage = message;
+                this.feedbackEndTime = Date.now() + 2000; // Show for 2 seconds
             }
 
             checkLevelComplete() {
@@ -666,6 +679,18 @@
                     this.ctx.translate(this.boat.x, this.boat.y);
                     this.ctx.font = '20px Arial';
                     this.ctx.fillText('🌿', -10, -20);
+                    this.ctx.restore();
+                }
+
+                // Draw feedback message
+                if (this.feedbackMessage) {
+                    this.ctx.save();
+                    this.ctx.font = 'bold 20px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    this.ctx.fillRect(0, this.canvas.height - 60, this.canvas.width, 50);
+                    this.ctx.fillStyle = '#ffcc00';
+                    this.ctx.fillText(this.feedbackMessage, this.canvas.width / 2, this.canvas.height - 30);
                     this.ctx.restore();
                 }
             }
