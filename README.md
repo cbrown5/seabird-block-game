@@ -4,7 +4,7 @@ Three educational games about marine ecosystems:
 
 1. **🐦 [Seabird Foraging Game](https://www.seascapemodels.org/seabird-block-game)** - A puzzle game about seabird ecology and parental care
 2. **🐟 [Ocean Survival Game](https://www.seascapemodels.org/seabird-block-game/ocean-game)** - An action-survival game about larval fish avoiding predators
-3. **🚣 [River Data Collection Game](https://www.seascapemodels.org/seabird-block-game/river-game)** - An educational game about collecting balanced ecological data from river habitats
+3. **🚣 [Ocean Survey Data Collection Game](https://www.seascapemodels.org/seabird-block-game/river-game)** - An educational game about collecting balanced ecological survey data
 
 ## TODO, improvements
 
@@ -55,28 +55,28 @@ A fast-paced action game inspired by Vampire Survivors where you control a schoo
 - Canvas-based graphics with smooth animations
 - Keyboard controls (Arrow keys or WASD)
 
-### 🚣 River Data Collection Game (`river-game.html`)
+### 🚣 Ocean Survey Data Collection Game (`river-game.html`)
 
-An educational action game where you navigate a boat on a river to collect balanced ecological data samples from different habitat types.
+An educational action game where you navigate a boat in the ocean to collect balanced ecological data samples from different habitat types.
 
 #### Gameplay
 
 - Control a boat using arrow keys, WASD, or touch/click controls
 - Collect data samples from 4 different habitat types: Forest 🌳, Mountain 🏔️, Beach 🏖️, and Grassland 🌾
-- Collect 3 samples of each habitat type to complete a level and progress
-- Avoid crocodiles 🐊 that can steal your collected data
-- Navigate through seaweed 🌿 that slows down your boat
-- Strategic risk-reward gameplay as seaweed grows near crocodiles
+- Collect 5 samples of each habitat type to complete a level and progress
+- Avoid crocodiles 🐊 that steal your collected data (2 samples per collision)
+- Navigate through seaweed 🌿 that entangles and slows down your boat
+- When entangled, your boat is more vulnerable to crocodile attacks
 
 #### Features
 
 - Progressive difficulty with more obstacles in higher levels
-- Real-time obstacle and data movement on the river
-- Speed monitoring system showing current boat speed
-- Text-based feedback for data collection and game events
+- Stationary habitats positioned throughout the ocean
+- Visual feedback for game events displayed on canvas
 - Level-based progression with increasing challenges
 - Canvas-based rendering with emoji graphics
 - Mobile-friendly touch controls
+- Responsive design with window resize handling
 
 ## 🚀 Running the Games
 
